@@ -1,0 +1,50 @@
+name: legacy-telecom
+
+services:
+  target:
+    build: ./target
+    hostname: legacy-telecom.hns
+    networks:
+      lab:
+        ipv4_address: ${LEGACY_IP:-172.30.10.10}
+        aliases: [legacy-telecom.hns]
+    volumes:
+      - flags:/var/lib/legacy-state
+    cap_drop: [ALL]
+    # SSH, initialisation des comptes et sudo dans la cible uniquement.
+    cap_add: [CHOWN, DAC_OVERRIDE, FOWNER, SETGID, SETUID, SYS_CHROOT, AUDIT_WRITE, KILL, NET_BIND_SERVICE]
+    pids_limit: 128
+    mem_limit: 384m
+    cpus: 1.0
+    restart: "no"
+    healthcheck:
+      test: [CMD, python3, /opt/legacy/healthcheck.py]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+      start_period: 10s
+
+  attacker:
+    profiles: [tools]
+    build: ./attacker
+    command: [sleep, infinity]
+    networks: [lab]
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    pids_limit: 64
+    mem_limit: 256m
+    volumes:
+      - ./tests/e2e.py:/opt/tests/e2e.py:ro
+    depends_on:
+      target:
+        condition: service_healthy
+
+networks:
+  lab:
+    internal: true
+    ipam:
+      config:
+        - subnet: ${LEGACY_SUBNET:-172.30.10.0/24}
+
+volumes:
+  flags:

@@ -1,0 +1,2 @@
+# Vulnérabilité pédagogique : les arguments de find ne sont pas limités.
+support ALL=(root) NOPASSWD: /usr/bin/find
